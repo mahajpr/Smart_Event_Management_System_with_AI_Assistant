@@ -95,7 +95,7 @@ college-event-registration-system/
 │   ├── student_app.py
 │   ├── admin_dashboard.py
 │   └── requirements.txt
-│
+├── docker-compose.yml
 ├── .env.example
 ├── .gitignore
 └── README.md
@@ -131,6 +131,31 @@ streamlit run student_app.py
 
 Admin dashboard:
 streamlit run admin_dashboard.py
+
+Run with Docker
+
+1. Clone the repository
+
+git clone https://github.com/yourusername/collegeeventregistration.git
+
+2. Navigate to the project folder
+
+cd collegeeventregistration
+
+3. Start the containers
+
+docker compose up --build
+
+4. Open the applications
+
+Student Portal:
+http://localhost:8501
+
+Admin Dashboard:
+http://localhost:8502
+
+Backend API:
+http://localhost:8001/docs
 
  📡 API Endpoints
 
