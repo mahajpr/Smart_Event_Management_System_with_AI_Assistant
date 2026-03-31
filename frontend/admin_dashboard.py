@@ -19,7 +19,7 @@ if "token" not in st.session_state:
     pwd = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        res = requests.post("https://collegeeventregistersystem-production.up.railway.app/login",
+        res = requests.post("http://127.0.0.1:8000/login",
             json={"email": email, "password": pwd}
         )
 
@@ -43,7 +43,7 @@ with st.form("event_form"):
     time = st.text_input("Time")
 
     if st.form_submit_button("Create Event"):
-        res = requests.post("https://collegeeventregistersystem-production.up.railway.app/events",
+        res = requests.post("http://127.0.0.1:8000/events",
             json={
                 "title": title,
                 "venue": venue,

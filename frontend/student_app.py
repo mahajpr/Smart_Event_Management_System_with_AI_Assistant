@@ -17,7 +17,7 @@ event_list = []
 event_data = {}
 
 try:
-    res = requests.get("https://collegeeventregistersystem-production.up.railway.app//events")
+    res = requests.get("http://127.0.0.1:8000/events")
     if res.status_code == 200:
         events = res.json()
 
@@ -114,7 +114,7 @@ if submit:
     }
 
     try:
-        res = requests.post("https://collegeeventregistersystem-production.up.railway.app/register", json=payload)
+        res = requests.post("http://127.0.0.1:8000/register", json=payload)
 
         if res.status_code == 200:
             st.success("🎉 Registered successfully!")
@@ -125,7 +125,7 @@ if submit:
     except:
         st.error("Backend not running")
 
-API_CHAT = "https://collegeeventregistersystem-production.up.railway.app/chat"
+API_CHAT = "http://127.0.0.1:8000/chat"
 if "chat_open" not in st.session_state:
     st.session_state.chat_open = False
 
