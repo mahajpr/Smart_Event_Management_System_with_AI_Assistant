@@ -3,62 +3,92 @@ import os
 from fastapi import APIRouter
 from pydantic import BaseModel
 from groq import Groq
+from sentence_transformers import SentenceTransformer 
+import faiss
+from pypdf import PdfReader
+from dotenv import load_dotenv
+
+load_dotenv()
 
 router = APIRouter()
 
 API_KEY = os.getenv("GROQ_API_KEY")
+
+if not API_KEY:
+    raise ValueError("GROQ_API_KEY is not set")
+
 client = Groq(api_key=API_KEY)
 
-model = None
-index= None
-chunks = None
+embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 class ChatRequest(BaseModel):
     query: str
 
-def get_model():
-    global model
-    if model is None:
-        model = SentenceTransformer("all-MiniLM-L6-v2")
-    return model
+
+def load_chunks(text, source, chunk_size=300):
+    chunks = []
+    start = 0
+
+    while start < len(text):
+        end = start + chunk_size
+        chunk_text = text[start:end]
+
+        chunks.append({
+            "text": chunk_text,
+            "source": source
+        })
+
+        start = end
+
+    return chunks
 
 
-def get_index():
-    global index, chunks
+def load_file(file):
+    if file.endswith(".pdf"):
+        reader = PdfReader(file)
+        text = ""
+        for page in reader.pages:
+            text += page.extract_text() or ""
+        return text
 
-    if index is not None:
-        return index, chunks
+    elif file.endswith(".txt"):
+        with open(file, "r", encoding="utf-8") as f:
+            return f.read()
 
-    BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-    RULES_PATH = os.path.join(BASE_DIR, "services", "rules.txt")
+    return ""
 
-    with open(RULES_PATH, "r", encoding="utf-8") as f:
-        text = f.read()
+def prepare_chunks():
+    file_path = "services/rules.txt"   
+    text = load_file(file_path)
+    chunks = load_chunks(text, "rules.txt")
+    return chunks
 
-    chunks = [c.strip() for c in text.split("\n\n") if c.strip()]
 
-    model = get_model()
-    embeddings = model.encode(chunks)
+def create_index(chunks):
+    texts = [chunk["text"] for chunk in chunks]
+
+    embeddings = embed_model.encode(texts)
+
+    if len(embeddings.shape) == 1:
+        embeddings = embeddings.reshape(1, -1)
 
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
     index.add(np.array(embeddings))
 
-    return index, chunks  
+    return index, embeddings
 
-def retrieve_context(query, top_k=3):
-    index, chunks = get_index()
-    model = get_model()
-    q_emb = model.encode([query])
 
-    D, I = index.search(np.array(q_emb), top_k)
+def search(chunks, query, index, top_k=2):
+    query_embed = embed_model.encode([query])
+
+    distances, indices = index.search(np.array(query_embed), top_k)
 
     results = []
-    for idx in I[0]:
-        results.append(chunks[idx])
+    for i in indices[0]:
+        results.append(chunks[i])
 
-    return "\n".join(results)
-
+    return results
 
 
 def generate_answer(query, context):
@@ -67,19 +97,16 @@ You are the official assistant for an Inter-College Technical Fest.
 
 Your job:
 - Answer ONLY using the context provided 
-- Answer the question clearly  
-- Do not confuse yourself
-- Do NOT invent information
+- Do not invent information
 - If answer not in context → say:
   "Please contact the event coordinator for this information."
 
 Instructions:
-- Be short and specific
+- Be short and clear
 - Use bullet points if needed
 - Mention rules clearly
 - Mention team size if relevant
 - Mention time/venue if asked
-
 
 Context:
 {context}
@@ -96,11 +123,18 @@ Question:
     return completion.choices[0].message.content
 
 
-def rag_chat(query):
-    context = retrieve_context(query)
-    answer = generate_answer(query, context)
-    return answer
+chunks = prepare_chunks()
+index, embeddings = create_index(chunks)
 
+
+def rag_chat(query):
+    results = search(chunks, query, index)
+
+    context = "\n".join([r["text"] for r in results])
+
+    answer = generate_answer(query, context)
+
+    return answer
 
 @router.post("/chat")
 def chat_api(req: ChatRequest):

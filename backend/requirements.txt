@@ -11,3 +11,6 @@ python-jose
 groq
 numpy
 passlib
+faiss-cpu
+sentence-transformers
+pypdf
