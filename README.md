@@ -1,4 +1,4 @@
- 🎓 College Event Registration & Management System
+ 🎓 Smart Event Management System with AI Assistant
 
 An AI-enabled full-stack event management platform that allows students to register for college events and receive automated confirmations. Built using FastAPI, Streamlit, and SQLite. This system simulates a  institutional event platform with registration, admin dashboard, chat assistant, email notifications, and optional RAG support.
 
